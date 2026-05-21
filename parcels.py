@@ -64,9 +64,10 @@ def get_parcel_info(parcel_id):
 
 def parse_parcel(data):
     return {
-        "parcel_id": data.get("id"),
+        "parcel_id": data.get("parcelId"),
+        "cad_municipality_reg_num": data.get("cadMunicipalityRegNum"),
+        "parcel_number": data.get("parcelNumber"),
         "parcel_address": data.get("address"),
-        "parcel_area": data.get("area"),
         "parcel_parts": [p["name"] for p in data.get("parcelParts", [])],
         "possessors": [
             p["name"]
@@ -98,6 +99,7 @@ def search_owner(parcel_ids, owner_name):
     state_dir = _state_dir(owner_name)
     checked_path = os.path.join(state_dir, "checked.txt")
     matches_path = os.path.join(state_dir, "matches.json")
+    raw_path = os.path.join(state_dir, "raw.json")
 
     checked = set()
     if os.path.exists(checked_path):
@@ -108,6 +110,11 @@ def search_owner(parcel_ids, owner_name):
     if os.path.exists(matches_path):
         with open(matches_path) as f:
             results = json.load(f)
+
+    raw_results = []
+    if os.path.exists(raw_path):
+        with open(raw_path) as f:
+            raw_results = json.load(f)
 
     remaining = [pid for pid in parcel_ids if pid not in checked]
     skipped = len(parcel_ids) - len(remaining)
@@ -122,8 +129,11 @@ def search_owner(parcel_ids, owner_name):
         if any(owner_name.upper() in p.upper() for p in parsed["possessors"]):
             print(f"  ✓ Found '{owner_name}' on parcel {parcel_id}!{' ' * 20}")
             results.append(parsed)
+            raw_results.append(data)
             with open(matches_path, "w") as f:
                 json.dump(results, f, ensure_ascii=False, indent=2)
+            with open(raw_path, "w") as f:
+                json.dump(raw_results, f, ensure_ascii=False, indent=2)
         else:
             with open(checked_path, "a") as f:
                 f.write(f"{parcel_id}\n")
